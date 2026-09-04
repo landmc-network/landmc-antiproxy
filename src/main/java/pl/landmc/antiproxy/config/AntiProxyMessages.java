@@ -20,26 +20,27 @@ public class AntiProxyMessages extends OkaeriConfig {
     @Comment("Ekran rozlaczenia po wykryciu VPN/proxy.")
     @CustomKey("blocked-kick")
     public String blockedKick =
-            "<red><bold>Wykryto VPN lub proxy</bold></red>"
-                    + "<newline><newline><gray>Wyłącz je i połącz się ponownie."
+            "<green><bold>LANDMC.PL</bold>"
+                    + "<newline><newline><gray>Wykryto połączenie przez VPN lub proxy."
+                    + "<newline><gray>Wyłącz je i połącz się ponownie."
                     + "<newline><gray>Jeśli to pomyłka, napisz do administracji.";
 
     @Comment("")
     @Comment("Ekran rozlaczenia dla zablokowanego ASN, operatora lub kraju.")
     @CustomKey("geo-blacklist-kick")
     public String geoBlacklistKick =
-            "<red><bold>Połączenie odrzucone</bold></red>"
+            "<green><bold>LANDMC.PL</bold>"
                     + "<newline><newline><gray>Połączenia od tego operatora nie są dozwolone.";
 
     @Comment("Ekran rozlaczenia dla nicku z czarnej listy.")
     @CustomKey("blacklist-kick")
     public String blacklistKick =
-            "<red><bold>Połączenie odrzucone</bold></red>"
+            "<green><bold>LANDMC.PL</bold>"
                     + "<newline><newline><gray>Ten nick jest zablokowany.";
 
     @Comment("Ekran rozlaczenia po przekroczeniu limitu polaczen z jednego adresu.")
     @CustomKey("ip-limit-kick")
     public String ipLimitKick =
-            "<red><bold>Zbyt wiele połączeń</bold></red>"
+            "<green><bold>LANDMC.PL</bold>"
                     + "<newline><newline><gray>Z tego adresu jest już połączonych zbyt wielu graczy.";
 }

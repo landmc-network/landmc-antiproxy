@@ -5,7 +5,7 @@
 [versions]
 
 # Must match the version published by landmc-platform.
-landmc-platform = "1.1.0"
+landmc-platform = "1.2.0"
 
 # Velocity 4 publishes Java 25 bytecode, which is why this compiles with --release 25.
 velocity = "4.1.1"
