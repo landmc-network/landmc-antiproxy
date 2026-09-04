@@ -13,11 +13,25 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import pl.landmc.antiproxy.IpReputation;
 import pl.landmc.antiproxy.config.AntiProxyConfig;
 
+/**
+ * One detection service, asked about one address.
+ *
+ * <p>Asynchronous throughout: the answer is awaited by an {@code EventTask} on the connection,
+ * not by a proxy thread, so a provider having a slow day delays one login rather than all of
+ * them.
+ *
+ * <p>Two details that look like preferences and are not. Redirects are never followed, because
+ * the key is in the query string of the configured URL and a redirect would hand it to whatever
+ * host the response names. And a non-200 becomes an exception rather than "not a proxy", so the
+ * caller can tell "the service says this address is clean" from "the service did not answer" -
+ * the second must not read as an endorsement.
+ */
 public final class DetectionServiceClient {
 
     private final HttpClient httpClient;
@@ -42,11 +56,14 @@ public final class DetectionServiceClient {
             AntiProxyConfig.Service serviceConfig,
             String apiKey,
             Logger logger,
-            boolean debugEnabled
-    ) {
+            boolean debugEnabled) {
+
+        Objects.requireNonNull(apiConfig, "apiConfig");
+        Objects.requireNonNull(serviceConfig, "serviceConfig");
+
         this.timeoutMillis = apiConfig.timeoutMillis;
-        this.apiKey = apiKey;
-        this.logger = logger;
+        this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
+        this.logger = Objects.requireNonNull(logger, "logger");
         this.debugEnabled = debugEnabled;
 
         this.outputErrors = serviceConfig.outputErrors;
@@ -74,8 +91,11 @@ public final class DetectionServiceClient {
     private IpReputation interpret(String address, HttpResponse<String> response) {
         String body = response.body();
         if (this.debugEnabled) {
+            // The body only. The request URL carries the API key, so it never goes near a log
+            // - a debug session should not be the thing that leaks a paid key into a paste.
             this.logger.info(
-                    "[AntiProxy debug] service response for {}: HTTP {} -> {}",
+                    "[{}] response for {}: HTTP {} -> {}",
+                    this.providerName,
                     address,
                     response.statusCode(),
                     body);

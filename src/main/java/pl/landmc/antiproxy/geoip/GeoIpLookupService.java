@@ -18,6 +18,16 @@ import pl.landmc.antiproxy.config.AntiProxyConfig;
  * and geoBlacklist can decide without ever calling a 'services' detection entry - matching how a
  * known-good ISP should never even be sent to a third party.
  */
+/**
+ * Reads the local GeoLite2 databases.
+ *
+ * <p>On the login path, so it does no network I/O: MaxMind's reader keeps the database mapped
+ * in memory and a lookup is a read from it. That is the whole reason the ASN and country checks
+ * run before any call to a paid API.
+ *
+ * <p>{@link #reload()} swaps the readers when the updater has fetched a newer file, so a
+ * refresh does not need a proxy restart.
+ */
 public final class GeoIpLookupService {
 
     private final Logger logger;

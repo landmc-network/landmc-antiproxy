@@ -21,7 +21,7 @@ public final class AntiProxyConfig extends OkaeriConfig {
     @Comment("Logs the raw response returned by the detection service for every check.")
     public boolean debug = false;
 
-    @Comment("When true, the connecting player is never auto-checked on join. Use '/skytopantiproxy check <player|ip>' "
+    @Comment("When true, the connecting player is never auto-checked on join. Use '/antiproxy check <adres>' "
             + "to check manually, or combine with another AntiVPN plugin.")
     public boolean passive = false;
 

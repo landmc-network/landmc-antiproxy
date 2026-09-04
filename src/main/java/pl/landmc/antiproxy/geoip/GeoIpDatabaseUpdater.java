@@ -11,10 +11,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPInputStream;
+import com.velocitypowered.api.plugin.PluginContainer;
+import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.scheduler.ScheduledTask;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import pl.landmc.antiproxy.config.AntiProxyConfig;
 
@@ -39,39 +42,62 @@ public final class GeoIpDatabaseUpdater {
     private final HttpClient httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
-    private ScheduledExecutorService scheduler;
+    private final ProxyServer proxy;
+    private final PluginContainer plugin;
+
+    private @Nullable ScheduledTask task;
 
     public GeoIpDatabaseUpdater(
+            ProxyServer proxy,
+            PluginContainer plugin,
             Logger logger,
             String licenseKey,
             File dataDirectory,
             AntiProxyConfig.GeoIp config,
-            Runnable onUpdated
-    ) {
-        this.logger = logger;
-        this.licenseKey = licenseKey;
-        this.dataDirectory = dataDirectory;
-        this.config = config;
-        this.onUpdated = onUpdated;
+            Runnable onUpdated) {
+
+        this.proxy = Objects.requireNonNull(proxy, "proxy");
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.logger = Objects.requireNonNull(logger, "logger");
+        this.licenseKey = Objects.requireNonNull(licenseKey, "licenseKey");
+        this.dataDirectory = Objects.requireNonNull(dataDirectory, "dataDirectory");
+        this.config = Objects.requireNonNull(config, "config");
+        this.onUpdated = Objects.requireNonNull(onUpdated, "onUpdated");
     }
 
+    /**
+     * Downloads now, then every configured number of hours.
+     *
+     * <p>Runs on the proxy's scheduler rather than a thread of its own. A download every day or
+     * two does not justify a dedicated thread, and the proxy already stops its scheduler
+     * cleanly on shutdown - which a plugin's own executor has to be remembered to do.
+     *
+     * <p>GeoLite2 is published about twice a week, so checking much more often than daily only
+     * costs MaxMind bandwidth and gets nothing back.
+     */
     public void start() {
-        long periodHours = Math.max(1, this.config.autoUpdate.refreshHours);
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
-            Thread thread = new Thread(task, "skytop-antiproxy-geoip-updater");
-            thread.setDaemon(true);
-            return thread;
-        });
-        this.scheduler.scheduleWithFixedDelay(this::refreshAll, 0, periodHours, TimeUnit.HOURS);
+        long hours = Math.max(1, this.config.autoUpdate.refreshHours);
+
+        this.task = this.proxy.getScheduler()
+                .buildTask(this.plugin.getInstance().orElseThrow(), this::refreshAll)
+                .repeat(hours, TimeUnit.HOURS)
+                .schedule();
     }
 
     public void shutdown() {
-        if (this.scheduler != null) {
-            this.scheduler.shutdownNow();
-            this.scheduler = null;
+        if (this.task != null) {
+            this.task.cancel();
+            this.task = null;
         }
     }
 
+    /**
+     * Fetches both databases and tells the lookup service when either changed.
+     *
+     * <p>Blocks on the HTTP calls on purpose: this runs on a scheduler thread whose whole job
+     * is to wait for them, and an asynchronous client would only add callbacks to a task with
+     * nothing else to do.
+     */
     private void refreshAll() {
         boolean asnUpdated =
                 this.downloadEdition(ASN_EDITION, new File(this.dataDirectory, this.config.asnDatabasePath));

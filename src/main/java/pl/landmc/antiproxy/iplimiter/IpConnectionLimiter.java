@@ -8,6 +8,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import pl.landmc.antiproxy.config.AntiProxyConfig;
 
+/**
+ * Caps how many connections one address may hold at once.
+ *
+ * <p>Aimed at a bot that opens hundreds of connections from one machine, not at players: a
+ * household, a student hall or a mobile carrier's NAT can legitimately put several people
+ * behind one address, which is why the default is off and the limit is not one.
+ *
+ * <p>A slot is taken at pre-login and released on disconnect. Anything that refuses a
+ * connection after taking one has to release it - see the note in the login listener, because
+ * a leaked slot eventually locks out everyone sharing that address.
+ */
 public final class IpConnectionLimiter {
 
     private final boolean enabled;
@@ -37,7 +48,7 @@ public final class IpConnectionLimiter {
 
     /**
      * Clears any tracked state for the given address, in either mode. Used by the admin
-     * '/skytopantiproxy resetip' command to recover an address whose counter got stuck above
+     * '/antiproxy' command to recover an address whose counter got stuck above
      * 'maximum' - e.g. a connection that was denied before ever reaching a state that would call
      * release() - without needing to restart the whole proxy.
      */

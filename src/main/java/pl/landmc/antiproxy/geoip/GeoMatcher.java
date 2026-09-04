@@ -5,6 +5,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+/**
+ * Whether an address belongs to one of the listed ASNs, ISPs or countries.
+ *
+ * <p>Answered from the local GeoLite2 files, which is what makes it worth checking before any
+ * paid API call: on a Polish network most connections match the ISP allowlist here and never
+ * leave the process.
+ *
+ * <p>Runs on the login path, so it does no I/O of its own - the MaxMind reader keeps its
+ * database mapped in memory and a lookup is a read from it.
+ */
 public final class GeoMatcher {
 
     private GeoMatcher() {

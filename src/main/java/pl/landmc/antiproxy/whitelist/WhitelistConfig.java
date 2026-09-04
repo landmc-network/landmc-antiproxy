@@ -4,6 +4,10 @@ import eu.okaeri.configs.OkaeriConfig;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The on-disk form of the whitelist: entries with when each was added and by whom, so an
+ * exception nobody remembers granting can still be traced.
+ */
 public final class WhitelistConfig extends OkaeriConfig {
 
     public List<Entry> entries = new ArrayList<>();

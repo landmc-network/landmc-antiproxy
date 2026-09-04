@@ -7,6 +7,12 @@ import com.google.gson.JsonPrimitive;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Turns a nested JSON response into {@code a.b.c -> value} pairs.
+ *
+ * <p>Exists so a condition in the configuration can name a field several levels down without
+ * this project knowing the shape of any particular provider's response.
+ */
 public final class JsonFlattener {
 
     private JsonFlattener() {

@@ -10,6 +10,16 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Names and addresses that skip every check, including the blacklist.
+ *
+ * <p>Held in memory and written through to a file, because it is read on the login path and
+ * written by a command - a handful of entries, changed rarely, asked about constantly.
+ *
+ * <p>A file rather than a database row on purpose: an operator locked out by their own anti-VPN
+ * needs to be able to fix it with a text editor, and that must not depend on the database being
+ * reachable.
+ */
 public final class WhitelistStore {
 
     private final WhitelistConfig config;

@@ -7,6 +7,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * One rule read out of the configuration, such as {@code {fraud_score}>=90}.
+ *
+ * <p>Compiled once at startup and evaluated per lookup against the flattened response. This is
+ * what lets a second detection provider be configured without code: its answer is JSON, and
+ * which of its fields matter belongs in the config rather than in a class per provider.
+ */
 public record Condition(String fieldPath, Operator operator, String value) {
 
     private static final Pattern EXPRESSION_PATTERN =

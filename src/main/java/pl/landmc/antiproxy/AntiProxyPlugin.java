@@ -105,7 +105,9 @@ public final class AntiProxyPlugin {
         this.startGeoIp();
 
         WhitelistStore whitelist = new WhitelistStore(this.dataDirectory.resolve("whitelist.yml").toFile());
-        this.ipRanges = new IpRangeService(this.logger, this.config.ipRange);
+        this.ipRanges = new IpRangeService(
+                this.proxy, this.container(), this.logger, this.config.ipRange);
+        this.ipRanges.start();
         IpConnectionLimiter ipLimiter = new IpConnectionLimiter(this.config.ipLimiter);
 
         this.service = new AntiProxyService(
@@ -223,6 +225,8 @@ public final class AntiProxyPlugin {
                 // Reloads the lookup service in place when a fresh database lands, so an
                 // update does not need a proxy restart to take effect.
                 this.geoIpUpdater = new GeoIpDatabaseUpdater(
+                        this.proxy,
+                        this.container(),
                         this.logger,
                         licenseKey,
                         this.dataDirectory.toFile(),
@@ -237,6 +241,11 @@ public final class AntiProxyPlugin {
         }
 
         this.geoIp = GeoIpLookupService.load(this.logger, this.config.geoIp, this.dataDirectory.toFile());
+    }
+
+    /** This plugin's container, which the proxy's scheduler needs as a task owner. */
+    private com.velocitypowered.api.plugin.PluginContainer container() {
+        return this.proxy.getPluginManager().ensurePluginContainer(this);
     }
 
     private List<DetectionServiceClient> detectionClients() {
