@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The platform is resolved from GitHub Packages, which requires a token even though the
+  # package is public.
+  packages: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # --refresh-dependencies because the platform is a snapshot: GitHub Packages overwrites
+      # it in place, so a cached copy from an earlier run can be silently out of date.
+      - name: Build
+        run: >-
+          ./gradlew build --no-daemon --refresh-dependencies
+          -Pgpr.user=${{ github.actor }}
+          -Pgpr.token=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/tests/test
+          retention-days: 7
+
+      - name: Upload plugin jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: landmc-antiproxy
+          path: build/libs/landmc-antiproxy.jar
+          retention-days: 14
