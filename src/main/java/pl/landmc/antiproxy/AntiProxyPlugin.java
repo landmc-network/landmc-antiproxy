@@ -5,6 +5,7 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.Dependency;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -56,7 +57,12 @@ import pl.landmc.platform.proxy.command.VelocityCommands;
         version = "1.0.0-SNAPSHOT",
         description = "Wykrywanie VPN i proxy na wejściu do sieci LandMC.",
         url = "https://github.com/landmc-network/landmc-antiproxy",
-        authors = {"Crispi"})
+        authors = {"Crispi"},
+        // The JDBC driver lives in landmc-proxy, and only there. Velocity plugin class loaders
+        // can see one another, so the same driver packaged into two plugins is one class
+        // defined twice - and an object built by one copy reaching code from the other is a
+        // LinkageError. This dependency is what guarantees the single copy is already loaded.
+        dependencies = @Dependency(id = "landmc-proxy"))
 public final class AntiProxyPlugin {
 
     private final ProxyServer proxy;

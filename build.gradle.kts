@@ -39,8 +39,11 @@ dependencies {
     // call entirely rather than being looked up over the network.
     implementation(libs.maxmind.geoip)
 
-    runtimeOnly(libs.h2)
-    runtimeOnly(libs.mariadb)
+    // No JDBC driver here. Velocity lets plugin class loaders see one another, so a driver
+    // packaged into several plugins is defined several times over, and an object made by one
+    // copy handed to code from another is a LinkageError rather than a connection. landmc-proxy
+    // carries the drivers for every plugin on this proxy, and this plugin declares a hard
+    // dependency on it so they are loaded before anything here asks for a connection.
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
@@ -82,39 +85,40 @@ tasks.shadowJar {
 }
 
 /**
- * Packages that must reach the runtime under their real names.
+ * Packages that must not end up inside this jar.
  *
- * H2 because its file format records class names; the JDBC drivers because the platform looks
- * them up by name and because a driver registers through META-INF/services, which a relocation
- * rewrites out from under it.
+ * A JDBC driver is looked up by name and its objects travel out of the plugin that created
+ * them, so on a proxy running more than one LandMC plugin every extra copy is the same class
+ * defined twice by two class loaders - which is a LinkageError, not a slower connection.
+ * landmc-proxy is the one plugin that ships them.
  */
-val relocatedDatabaseLibraries = listOf("org/h2/", "org/mariadb/")
+val databaseDrivers = listOf("org/h2/", "org/mariadb/")
 
-val checkDatabaseNotRelocated = tasks.register("checkDatabaseNotRelocated") {
+val checkNoDatabaseDriver = tasks.register("checkNoDatabaseDriver") {
     group = "verification"
-    description = "Fails when a database library ends up relocated."
+    description = "Fails when a JDBC driver is packaged into this plugin."
     dependsOn(tasks.shadowJar)
 
     val jarFile = tasks.shadowJar.flatMap { it.archiveFile }
     inputs.file(jarFile)
 
     doLast {
-        val relocated = ZipFile(jarFile.get().asFile).use { zip ->
+        val bundled = ZipFile(jarFile.get().asFile).use { zip ->
             zip.entries().asSequence()
                 .map { it.name }
-                .filter { name -> relocatedDatabaseLibraries.any { name.startsWith("pl/landmc/antiproxy/libs/$it") } }
+                .filter { name -> databaseDrivers.any { name.startsWith(it) } }
                 .take(1)
                 .toList()
         }
 
-        check(relocated.isEmpty()) {
-            "A database library is relocated (${relocated.first()}). See the note above " +
-                "relocatedDatabaseLibraries for why that breaks at runtime rather than at build time."
+        check(bundled.isEmpty()) {
+            "A JDBC driver is packaged into this plugin (${bundled.first()}). See the note " +
+                "above databaseDrivers for why a second copy of one breaks at runtime."
         }
     }
 }
 
-tasks.named("check") { dependsOn(checkDatabaseNotRelocated) }
+tasks.named("check") { dependsOn(checkNoDatabaseDriver) }
 
 tasks.build {
     dependsOn(tasks.shadowJar)
